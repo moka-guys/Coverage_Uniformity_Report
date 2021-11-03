@@ -13,7 +13,7 @@ library(methods)
 p <-
   arg_parser("Calculate the uniformity of coverage over multiple samples")
 p <-
-  add_argument(p, "--input_directory", help = "Input data directory")
+  add_argument(p, "--input_directory", help = "Input data directory containing the sambamba output files")
 p <-
   add_argument(p, "--output_directory", help = "Output directory for results")
 p <-
@@ -134,7 +134,7 @@ generate_simple_coverage_plot <- function(df, panel) {
 
 # Uses scale() function on data - scaling is done by dividing the columns for each sample by their root mean square.
 # This allows easier comparison between samples.
-scale_this <-
+scale_rms <-
   function(x)
     as.vector(scale(x, scale = TRUE, center = FALSE))
 
@@ -191,7 +191,7 @@ tbl$region <- paste(tbl$chrom,
 # Group the tibble data structure by samples so that average can be calculated accross samples
 tbl <- tbl %>%
   group_by(sample_id) %>%
-  mutate(scaled_meanCoverage = scale_this(meanCoverage))
+  mutate(scaled_meanCoverage = scale_rms(meanCoverage))
 
 # Identify Run ID from sample name and add as additional column
 tbl$run_name <-
@@ -240,17 +240,17 @@ for (run_name in unique(tbl$run_name)) {
   print(paste("Processing run name =", run_name))
   for (panel in unique(tbl$pan_number)) {
     print(paste("Processing panel number =", panel))
-    
+
     df <- tbl[tbl$pan_number == panel, ]
-    
+
     # Update number of samples to be plotted
     num_samples <- length(unique(df$sample_id))
     print(paste("Number of samples =", num_samples))
-    
+
     # Update number of target regions for this panel
     num_target_regions <- length(unique(df$region))
     print(paste("Number of target regions =", num_target_regions))
-    
+
     # Generate file name:
     filename <- paste0(run_name, "_", panel)
 
@@ -259,7 +259,7 @@ for (run_name in unique(tbl$run_name)) {
         # Create coverage plot of means for PDF
         print("Generating simplified plot")
         simplified_plot <- generate_simple_coverage_plot(df, panel)
-        
+
         # Save simplified plot to pdf:
         filepath <-
           paste0(output_directory, "/", filename, "_coverage.pdf")
@@ -277,15 +277,14 @@ for (run_name in unique(tbl$run_name)) {
     # Generate interactive plot
     if (args$plot_figures == TRUE && args$simple_plot_only == FALSE){
 
-        
         # Generate static plot of data for each
         print("Generating static ggplot")
         static_plot <- generate_coverage_plot(df, panel)
-        
+
         # Add interactivity to plot:
         print("Generating Interactive plot")
         interactive_plot <- ggplotly(static_plot)
-        
+
         # Save interactive plot as a single html file:
         filepath <-
           paste0(output_directory, '/', filename, "_coverage.html")
